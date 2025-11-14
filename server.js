@@ -12,6 +12,7 @@ app.get("/", async (req, res) => {
       seeds: d.seeds?.map(x => x.name) ?? [],
       gear: d.gear?.map(x => x.name) ?? [],
       eggs: d.eggs?.map(x => x.name) ?? [],
+      events: d.events?.map(x => x.name) ?? [],
       merchant: d.travelingMerchant?.merchantName ?? null
     };
 
