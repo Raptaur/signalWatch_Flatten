@@ -3,21 +3,11 @@ import fetch from "node-fetch";
 
 const app = express();
 
-// --- Vulcan API endpoint ---
-const STOCK_URL = "https://api.joshlei.com/v2/growagarden/stock";
-
-// --- Your API key must be passed to the remote endpoint ---
-// If you don’t have a key yet, this endpoint will return a 401.
-// When you get the key, put it in your Render environment variables:
-const API_KEY = process.env.JSTUDIO_KEY || "";
+const STOCK_URL = "https://api.joshlei.com/json";
 
 app.get("/", async (req, res) => {
   try {
-    const r = await fetch(STOCK_URL, {
-      headers: {
-        "jstudio-key": API_KEY
-      }
-    });
+    const r = await fetch(STOCK_URL);
 
     if (!r.ok) {
       return res.status(r.status).json({
@@ -28,22 +18,14 @@ app.get("/", async (req, res) => {
 
     const d = await r.json();
 
-    // d.seed_stock = [{ display_name, quantity, ... }]
     const seeds = (d.seed_stock || []).map(x => x.display_name);
     const gear = (d.gear_stock || []).map(x => x.display_name);
     const eggs = (d.egg_stock || []).map(x => x.display_name);
     const events = (d.eventshop_stock || []).map(x => x.display_name);
 
-    // travelingmerchant_stock object exists only sometimes
     const merchant = d.travelingmerchant_stock?.merchantName ?? null;
 
-    const out = {
-      seeds,
-      gear,
-      eggs,
-      events,
-      merchant
-    };
+    const out = { seeds, gear, eggs, events, merchant };
 
     res.json(out);
 
