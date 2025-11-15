@@ -2,31 +2,37 @@ import express from "express";
 import fetch from "node-fetch";
 
 const app = express();
-
-async function fetchList(url) {
-  const r = await fetch(url);
-  if (!r.ok) return [];
-  const arr = await r.json();
-  return arr.map(x => x.name);  // DawnBot uses "name"
-}
+const STOCK_URL = "https://gagapi.onrender.com/alldata";
 
 app.get("/", async (req, res) => {
   try {
-    const seeds   = await fetchList("https://gagapi.onrender.com/seeds");
-    const gear    = await fetchList("https://gagapi.onrender.com/gear");
-    const eggs    = await fetchList("https://gagapi.onrender.com/eggs");
-    const events  = await fetchList("https://gagapi.onrender.com/events");
+    const r = await fetch(STOCK_URL);
 
-    // DawnBot currently has no travelling merchant
-    const merchant = null;
+    if (!r.ok) {
+      return res.status(r.status).json({
+        error: `Remote API returned ${r.status}`,
+        message: await r.text()
+      });
+    }
 
-    res.json({ seeds, gear, eggs, events, merchant });
+    const d = await r.json();
+
+    const out = {
+      seeds: d.seeds?.map(x => x.name) ?? [],
+      gear: d.gear?.map(x => x.name) ?? [],
+      eggs: d.eggs?.map(x => x.name) ?? [],
+      events: d.events?.map(x => x.name) ?? [],
+      merchant: d.travelingMerchant?.merchantName ?? null,
+      lastGlobalUpdate: d.lastGlobalUpdate ?? null   // ← *** important ***
+    };
+
+    res.json(out);
 
   } catch (err) {
     res.status(500).json({ error: err.toString() });
   }
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running on port", process.env.PORT || 3000);
-});
+app.listen(process.env.PORT || 3000, () =>
+  console.log("Server running on port", process.env.PORT || 3000)
+);
