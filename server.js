@@ -3,7 +3,7 @@ import fetch from "node-fetch";
 
 const app = express();
 
-const STOCK_URL = "https://api.joshlei.com/json";
+const STOCK_URL = "https://gagapi.onrender.com/alldata";
 
 app.get("/", async (req, res) => {
   try {
