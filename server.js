@@ -3,31 +3,24 @@ import fetch from "node-fetch";
 
 const app = express();
 
-const STOCK_URL = "https://gagapi.onrender.com/alldata";
+async function fetchList(url) {
+  const r = await fetch(url);
+  if (!r.ok) return [];
+  const arr = await r.json();
+  return arr.map(x => x.name);  // DawnBot uses "name"
+}
 
 app.get("/", async (req, res) => {
   try {
-    const r = await fetch(STOCK_URL);
+    const seeds   = await fetchList("https://gagapi.onrender.com/seeds");
+    const gear    = await fetchList("https://gagapi.onrender.com/gear");
+    const eggs    = await fetchList("https://gagapi.onrender.com/eggs");
+    const events  = await fetchList("https://gagapi.onrender.com/events");
 
-    if (!r.ok) {
-      return res.status(r.status).json({
-        error: `Remote API returned ${r.status}`,
-        message: await r.text()
-      });
-    }
+    // DawnBot currently has no travelling merchant
+    const merchant = null;
 
-    const d = await r.json();
-
-    const seeds = (d.seed_stock || []).map(x => x.display_name);
-    const gear = (d.gear_stock || []).map(x => x.display_name);
-    const eggs = (d.egg_stock || []).map(x => x.display_name);
-    const events = (d.eventshop_stock || []).map(x => x.display_name);
-
-    const merchant = d.travelingmerchant_stock?.merchantName ?? null;
-
-    const out = { seeds, gear, eggs, events, merchant };
-
-    res.json(out);
+    res.json({ seeds, gear, eggs, events, merchant });
 
   } catch (err) {
     res.status(500).json({ error: err.toString() });
