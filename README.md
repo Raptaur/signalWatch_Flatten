@@ -1,197 +1,133 @@
+
+------------------------------------------------------------------------
+
+------------------------------------------------------------------------
 📘 SignalWatch Flattener
 
-Flattening the Grow-A-Garden API for lightweight mobile automation
+A lightweight JSON flattener for Grow-A-Garden stock data
 Author: Raptaur (Chris)
-Purpose: Convert the complex JSON returned by the official Grow-A-Garden API into a simplified structure that MacroDroid can easily parse.
 
-
--------------------------------------------------------------------------
+------------------------------------------------------------------------
 🌱 Overview
-SignalWatch Flattener is a tiny Node.js server that fetches live Grow-A-Garden stock data and outputs a clean, minimal JSON object for automation tools (such as MacroDroid).
 
-The official GAG API returns deeply structured data that isn’t friendly for low-code systems.
-This service extracts the useful parts (seed names, gear names, etc.) and exposes them in a flat, predictable format.
+SignalWatch Flattener is a minimal Node.js service designed to fetch the live Grow-A-Garden stock data and convert it into a simplified JSON format that automation tools like MacroDroid can easily consume.
 
-This ensures:
+The official API returns deeply nested structures.
+This service extracts the useful pieces — seed names, gear names, etc. — and provides a clean, predictable output.
 
-Always-updated seed and gear lists
-No stale mirror data
-No authentication required
-One stable endpoint for MacroDroid to poll every 5 minutes
+This keeps the SignalWatch system:
+Fast
+Reliable
+Easy to automate
+Independent from Discord bots or stale mirrors
 
 
--------------------------------------------------------------------------
+------------------------------------------------------------------------
 🔗 Live Data Source
-The flattener pulls directly from the official public Vulcan backend:
+
+The service queries the official public Grow-A-Garden JSON endpoint:
 
 https://api.joshlei.com/json
 
 This endpoint contains:
-Live seed stock
-Live gear stock
+Seed stock
+Gear stock
 Egg stock
-Event shop stock
-Traveling merchant stock
-Quantities, names, icons, and timers
-It requires no API key.
+Event shop
+Traveling merchant
+Quantities, icons, timers
+Requires no authentication.
 
 
--------------------------------------------------------------------------
-🗂 Flattened Output Format
-The server reduces the complex JSON into:
+------------------------------------------------------------------------
+🗂 Flattened Output Schema
+
+The server exposes a simplified JSON structure:
 
 {
-  "seeds": ["Carrot", "Tomato", "Blueberry", "Strawberry"],
-  "gear": ["Harvest Tool", "Trowel"],
-  "eggs": ["Fire Egg", "Frost Egg"],
-  "events": ["Safari Seed Pack", "Spirit Bloom"],
-  "merchant": "Fall Traveling Merchant"
+  "seeds": [...],
+  "gear": [...],
+  "eggs": [...],
+  "events": [...],
+  "merchant": "..."
 }
 
 
-This format is:
-Stable
-Easy for MacroDroid to parse
-Ideal for iterator loops
-Exactly tailored for SignalWatch alerts
+All arrays contain only human-readable item names (display_name), ideal for MacroDroid’s:
+iterator loops
+list comparisons
+notifications
+“track item” logic
 
 
--------------------------------------------------------------------------
+------------------------------------------------------------------------
 ⚙️ How It Works
-When a user visits /, the server:
-Fetches the full JSON from https://api.joshlei.com/json
 
-Reads:
-seed_stock
-gear_stock
-egg_stock
-eventshop_stock
-travelingmerchant_stock
-Extracts only the display_name fields
+When someone requests the root endpoint (/):
+The service fetches the full JSON from https://api.joshlei.com/json
+It extracts the display_name field from each stock category
+It returns a lightweight object containing only the relevant values
 
-Outputs them as simple arrays
-No authentication
-No caching
-Always fresh
-Perfect for 5-minute polling intervals
+No caching.
+No keys.
+Always fresh.
 
 
--------------------------------------------------------------------------
-📁 server.js (core logic)
+------------------------------------------------------------------------
+📁 Source Files
 
-----
-import express from "express";
-import fetch from "node-fetch";
+server.js
+Handles fetching, flattening, and delivering JSON output.
 
-const app = express();
-
-const STOCK_URL = "https://api.joshlei.com/json";
-
-app.get("/", async (req, res) => {
-  try {
-    const r = await fetch(STOCK_URL);
-
-    if (!r.ok) {
-      return res.status(r.status).json({
-        error: `Remote API returned ${r.status}`,
-        message: await r.text()
-      });
-    }
-
-    const d = await r.json();
-
-    const seeds = (d.seed_stock || []).map(x => x.display_name);
-    const gear = (d.gear_stock || []).map(x => x.display_name);
-    const eggs = (d.egg_stock || []).map(x => x.display_name);
-    const events = (d.eventshop_stock || []).map(x => x.display_name);
-
-    const merchant = d.travelingmerchant_stock?.merchantName ?? null;
-
-    const out = { seeds, gear, eggs, events, merchant };
-
-    res.json(out);
-
-  } catch (err) {
-    res.status(500).json({ error: err.toString() });
-  }
-});
-
-app.listen(process.env.PORT || 3000, () => {
-  console.log("Server running on port", process.env.PORT || 3000);
-});
-----
-
--------------------------------------------------------------------------
-📦 package.json
-{
-  "name": "signalwatch-flattener",
-  "version": "1.0.0",
-  "description": "Flattens GAG API data for MacroDroid",
-  "main": "server.js",
-  "type": "module",
-  "dependencies": {
-    "express": "^4.18.2",
-    "node-fetch": "^3.3.2"
-  },
-  "scripts": {
-    "start": "node server.js"
-  }
-}
+package.json
+Defines dependencies (express, node-fetch) and the start script.
 
 
--------------------------------------------------------------------------
+------------------------------------------------------------------------
 🌍 Deploying to Render
 
-Create a new Web Service
-Connect it to this GitHub repo
-Auto-deploy on commit
-That’s it — Render will host your flattener and expose a clean JSON endpoint.
+Create a new Render Web Service
+Connect this GitHub repository
+Enable auto-deploy on commit
+Render will host the flattened endpoint (example):
 
-Example production URL:
 https://signalwatch-flatten.onrender.com/
 
-MacroDroid hits this URL every 5 minutes to check for new seeds.
+MacroDroid polls this URL every 5 minutes.
 
 
--------------------------------------------------------------------------
-🔔 MacroDroid Usage
+------------------------------------------------------------------------
+🔔 Using with MacroDroid
 
-The flattened endpoint makes this workflow trivial:
+This flattener enables:
+Clean JSON GET requests
+Array iteration
+Seed-tracking logic
+“Watchdog” alerts
+Fail-safe retry logic
+Reliable, predictable automation
 
-HTTP GET → your Render URL
-
-Store JSON in a dictionary
-
-Iterate seeds with {iterator_value}
-
-Compare against your “wanted seeds” array
-
-Trigger notifications when a match appears
-
-Because the flattener strips away all complexity, MacroDroid never interacts with the raw GAG API.
+MacroDroid no longer interacts with the full GAG API — only the flattened one.
 
 
--------------------------------------------------------------------------
+------------------------------------------------------------------------
 🛟 Troubleshooting
 
 Seeing stale data?
-→ Ensure Render rebuilt the latest commit
-→ Hit the endpoint manually to wake the instance
+→ Ensure Render deployed the latest commit.
+→ Hit the Render URL once to wake the instance.
 
 Empty arrays?
-→ The GAG API occasionally returns empty lists during restock windows.
-→ Your MacroDroid retry logic handles this.
+→ GAG API sometimes clears stock briefly during restock moments.
 
-Service not responding?
-→ Render free tier sleeps after ~15 minutes of inactivity
-→ First request may take 1–3 seconds
-→ Subsequent requests are immediate
+Slow first load?
+→ Render free tier sleeps after 15 minutes of inactivity.
 
 
--------------------------------------------------------------------------
-❤️ Credits
+------------------------------------------------------------------------
+💛 Credits
 
-Grow-A-Garden – for the game and API
-JoshLei – for the public Vulcan JSON endpoint
-Raptaur / Chris – for the SignalWatch automation system
-Tifa AI Companion – for systems design, flatten logic & debugging
+Grow-A-Garden — for the game & data
+JoshLei — for the public JSON endpoint
+Raptaur / Chris — creator of SignalWatch
+Tifa AI Companion — debugging, design & flatten logic
